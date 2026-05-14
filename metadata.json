@@ -1,0 +1,6 @@
+{
+  "name": "MatrixFlow",
+  "description": "High-precision matrix product calculator with LaTeX export, interactive visualization, and educational linear algebra guides.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

@@ -1,0 +1,36 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+
+@theme {
+  --color-accent: #10b981;
+  --color-bg-dark: #0b0e14;
+  --color-surface-dark: #151921;
+  --color-border-dark: #1e293b;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-dark text-slate-200 selection:bg-accent/30;
+    font-feature-settings: "ss01", "ss03", "cv08", "cv11";
+  }
+}
+
+.matrix-grid-cell {
+  @apply w-12 h-12 bg-surface-dark border border-border-dark rounded flex items-center justify-center text-sm font-mono transition-all duration-200 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent/50 outline-none;
+}
+
+.matrix-grid-input {
+  @apply w-full h-full bg-transparent text-center outline-none p-1;
+}
+
+.highlight-row {
+  @apply bg-accent/20 border-accent/50;
+}
+
+.highlight-col {
+  @apply bg-accent/20 border-accent/50;
+}
+
+.math-rendered {
+  @apply overflow-x-auto py-4;
+}
