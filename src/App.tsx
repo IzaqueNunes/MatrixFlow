@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Minus, Copy, Calculator, AlertCircle, Check,
   FileJson, FileCode, Mail, Download, Info, Zap,
-  ArrowRight, ChevronRight, Lightbulb
+  ArrowRight, ChevronRight, Lightbulb, BarChart, Cpu
 } from 'lucide-react';
 import { InlineMath, BlockMath } from 'react-katex';
 
@@ -96,19 +96,70 @@ export default function App() {
 
   const isValid = colsA === rowsB;
 
-  const resultMatrix = useMemo(() => {
-    if (!isValid) return null;
-    const res: Matrix = Array(rowsA).fill(0).map(() => Array(colsB).fill(0));
-    for (let i = 0; i < rowsA; i++) {
-      for (let j = 0; j < colsB; j++) {
-        let sum = 0;
-        for (let k = 0; k < colsA; k++) {
-          sum += (matrixA[i]?.[k] ?? 0) * (matrixB[k]?.[j] ?? 0);
-        }
-        res[i][j] = sum;
-      }
+  const strassen = (A: Matrix, B: Matrix): Matrix => {
+    const n = A.length;
+    if (n <= 1) {
+      return [[A[0][0] * B[0][0]]];
+    }
+
+    const mid = n / 2;
+    const a11: Matrix = [], a12: Matrix = [], a21: Matrix = [], a22: Matrix = [];
+    const b11: Matrix = [], b12: Matrix = [], b21: Matrix = [], b22: Matrix = [];
+
+    for (let i = 0; i < mid; i++) {
+      a11[i] = A[i].slice(0, mid);
+      a12[i] = A[i].slice(mid);
+      a21[i] = A[i + mid].slice(0, mid);
+      a22[i] = A[i + mid].slice(mid);
+      b11[i] = B[i].slice(0, mid);
+      b12[i] = B[i].slice(mid);
+      b21[i] = B[i + mid].slice(0, mid);
+      b22[i] = B[i + mid].slice(mid);
+    }
+
+    const add = (M1: Matrix, M2: Matrix) => M1.map((row, i) => row.map((val, j) => val + M2[i][j]));
+    const sub = (M1: Matrix, M2: Matrix) => M1.map((row, i) => row.map((val, j) => val - M2[i][j]));
+
+    const p1 = strassen(add(a11, a22), add(b11, b22));
+    const p2 = strassen(add(a21, a22), b11);
+    const p3 = strassen(a11, sub(b12, b22));
+    const p4 = strassen(a22, sub(b21, b11));
+    const p5 = strassen(add(a11, a12), b22);
+    const p6 = strassen(sub(a21, a11), add(b11, b12));
+    const p7 = strassen(sub(a12, a22), add(b21, b22));
+
+    const c11 = add(sub(add(p1, p4), p5), p7);
+    const c12 = add(p3, p5);
+    const c21 = add(p2, p4);
+    const c22 = add(add(sub(p1, p2), p3), p6);
+
+    const res: Matrix = [];
+    for (let i = 0; i < mid; i++) {
+      res[i] = c11[i].concat(c12[i]);
+      res[i + mid] = c21[i].concat(c22[i]);
     }
     return res;
+  };
+
+  const resultMatrix = useMemo(() => {
+    if (!isValid) return null;
+    
+    // Resolve padding for Strassen
+    const maxSize = Math.max(rowsA, colsA, colsB);
+    let n = 1;
+    while (n < maxSize) n *= 2;
+
+    const paddedA: Matrix = Array(n).fill(0).map((_, r) => 
+      Array(n).fill(0).map((_, c) => (r < rowsA && c < colsA) ? matrixA[r][c] : 0)
+    );
+    const paddedB: Matrix = Array(n).fill(0).map((_, r) => 
+      Array(n).fill(0).map((_, c) => (r < rowsB && c < colsB) ? matrixB[r][c] : 0)
+    );
+
+    const fullResult = strassen(paddedA, paddedB);
+    
+    // Unpad
+    return fullResult.slice(0, rowsA).map(row => row.slice(0, colsB));
   }, [matrixA, matrixB, rowsA, colsA, rowsB, colsB, isValid]);
 
   const handleCellChange = (matrix: 'A' | 'B', r: number, c: number, val: string) => {
@@ -336,6 +387,81 @@ export default function App() {
                 </div>
               </section>
             )}
+
+            {/* Complexity Analysis */}
+            <section className="bg-gradient-to-br from-surface-dark to-bg-dark border border-border-dark p-8 rounded-3xl space-y-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-accent/20 rounded-lg">
+                  <BarChart className="text-accent w-5 h-5" />
+                </div>
+                <h2 className="text-xl font-bold lowercase">Algorithm Complexity Analysis</h2>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                {[
+                  { 
+                    label: "Time Complexity", 
+                    value: "O(n²·⁸⁰⁷)", 
+                    desc: "Strassen's Recursive Method",
+                    icon: Cpu
+                  },
+                  { 
+                    label: "Theoretical Speedup", 
+                    value: "~12.5%", 
+                    desc: "Relative to O(n³) for large n",
+                    icon: Zap
+                  },
+                  { 
+                    label: "Padding (n=2ᵏ)", 
+                    value: `${(() => {
+                      const ms = Math.max(rowsA, colsA, colsB);
+                      let n = 1;
+                      while (n < ms) n *= 2;
+                      return `${n}x${n}`;
+                    })()}`, 
+                    desc: "Internal matrix dimension",
+                    icon: Download
+                  }
+                ].map((item, idx) => (
+                  <div key={idx} className="p-6 bg-surface-dark border border-border-dark rounded-2xl space-y-2 group hover:border-accent/30 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">{item.label}</p>
+                      <item.icon className="w-4 h-4 text-slate-700 group-hover:text-accent transition-colors" />
+                    </div>
+                    <p className="text-2xl font-mono font-bold text-white">{item.value}</p>
+                    <p className="text-xs text-slate-500">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-6 bg-bg-dark/50 rounded-2xl border border-border-dark">
+                <h3 className="text-sm font-semibold text-slate-300 mb-4 lowercase">Technical Deep Dive: Strassen Implementation</h3>
+                <div className="grid md:grid-cols-2 gap-8 text-sm text-slate-400 leading-relaxed">
+                  <div className="space-y-4">
+                    <p>
+                      Para fins acadêmicos, este motor utiliza o <strong>Algoritmo de Strassen</strong>. Ao contrário do método padrão, ele utiliza 7 multiplicações recursivas para cada submatriz <InlineMath math="2 \times 2" />, em vez de 8.
+                    </p>
+                    <div className="p-3 bg-bg-dark rounded-xl border border-border-dark font-mono text-accent text-center text-xs">
+                      T(n) = 7T(n/2) + O(n²) ⟹ O(n^{2.807})
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] uppercase font-bold text-slate-500">Processo de Padding</h4>
+                    <p className="text-[11px] leading-relaxed">
+                      Como o Strassen requer matrizes <InlineMath math="2^k \times 2^k" />, preenchemos as dimensões atuais até a próxima potência de 2. Para a sua entrada atual, estamos operando internamente em uma matriz de:
+                    </p>
+                    <div className="math-rendered bg-bg-dark rounded-xl border border-border-dark p-2 text-center text-accent font-bold">
+                      {(() => {
+                        const ms = Math.max(rowsA, colsA, colsB);
+                        let n = 1;
+                        while (n < ms) n *= 2;
+                        return `${n} \times ${n}`;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
 
           {/* Sidebar Tools & Conversions */}
