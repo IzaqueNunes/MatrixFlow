@@ -12,8 +12,22 @@ import {
   Globe
 } from 'lucide-react';
 import { InlineMath, BlockMath } from 'react-katex';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 
 type Matrix = number[][];
+
+const generateChartData = () => {
+  const data = [];
+  for (let n = 2; n <= 100; n += 2) {
+    const theoretical = 4.7 * Math.pow(n, Math.log2(7));
+    const practical = n < 16 
+      ? Math.pow(n, 3) + Math.pow(n, 2) * (n - 1)
+      : Math.pow(n, Math.log2(7)) * 5.2;
+    data.push({ n, theoretical, practical });
+  }
+  return data;
+};
+const chartData = generateChartData();
 
 type Language = 'en-US' | 'pt-BR' | 'fr';
 
@@ -83,7 +97,8 @@ const translations: Record<Language, any> = {
       step1Desc: "The first step of our research involved implementing the classic Strassen algorithm in Python (via Google Colab) to compare the theoretical complexity O(n^2.807) with the practical execution time across various matrix sizes.",
       codeTitle: "Google Colab Implementation (Python)",
       comparisonTitle: "Theoretical vs. Practical Complexity",
-      comparisonDesc: "While the theoretical complexity of Strassen is O(n^2.807), in practice, the overhead of recursive calls, memory allocation, and hardware-level optimizations (like cache locality) often make standard algorithms faster for smaller matrices (n < 64 or 128). The practical implementation highlighted the crossover point where Strassen begins to outperform the O(n³) approach."
+      comparisonDesc: "While the theoretical complexity of Strassen is O(n^2.807), in practice, the overhead of recursive calls, memory allocation, and hardware-level optimizations (like cache locality) often make standard algorithms faster for smaller matrices (n < 64 or 128). The practical implementation highlighted the crossover point where Strassen begins to outperform the O(n³) approach.",
+      downloadNotebook: "Download Colab (.ipynb)"
     },
     footer: "MatrixFlow Technical Calculator © 2024 • Powered by AI Studio"
   },
@@ -152,7 +167,8 @@ const translations: Record<Language, any> = {
       step1Desc: "A primeira etapa do nosso trabalho envolveu a implementação do algoritmo clássico de Strassen em Python (via Google Colab) para comparar a complexidade teórica O(n^2.807) com o tempo de execução prático em vários tamanhos de matrizes.",
       codeTitle: "Implementação no Google Colab (Python)",
       comparisonTitle: "Complexidade Teórica vs. Prática",
-      comparisonDesc: "Enquanto a complexidade teórica do Strassen é O(n^2.807), na prática, o custo das chamadas recursivas, alocação de memória e otimizações de hardware (como localidade de cache) frequentemente tornam algoritmos padrão mais rápidos para matrizes menores (n < 64 ou 128). A implementação prática evidenciou o ponto de cruzamento (crossover) onde o Strassen começa a superar a abordagem O(n³)."
+      comparisonDesc: "Enquanto a complexidade teórica do Strassen é O(n^2.807), na prática, o custo das chamadas recursivas, alocação de memória e otimizações de hardware (como localidade de cache) frequentemente tornam algoritmos padrão mais rápidos para matrizes menores (n < 64 ou 128). A implementação prática evidenciou o ponto de cruzamento (crossover) onde o Strassen começa a superar a abordagem O(n³).",
+      downloadNotebook: "Baixar Relatório (.ipynb)"
     },
     footer: "MatrixFlow Calculadora Técnica © 2024 • Powered by AI Studio"
   },
@@ -221,10 +237,209 @@ const translations: Record<Language, any> = {
       step1Desc: "La première étape de notre recherche a consisté à implémenter l'algorithme de Strassen classique en Python (via Google Colab) pour comparer la complexité théorique O(n^2.807) au temps d'exécution pratique sur différentes tailles de matrices.",
       codeTitle: "Implémentation Google Colab (Python)",
       comparisonTitle: "Complexité théorique vs pratique",
-      comparisonDesc: "Bien que la complexité théorique de Strassen soit O(n^2.807), en pratique, le coût des appels récursifs, de l'allocation mémoire et des optimisations matérielles (comme la localité du cache) rendent souvent les algorithmes standards plus rapides pour les petites matrices (n < 64 ou 128). L'implémentation pratique a mis en évidence le point de croisement (crossover) où Strassen commence à surpasser l'approche O(n³)."
+      comparisonDesc: "Bien que la complexité théorique de Strassen soit O(n^2.807), en pratique, le coût des appels récursifs, de l'allocation mémoire et des optimisations matérielles (comme la localité du cache) rendent souvent les algorithmes standards plus rapides pour les petites matrices (n < 64 ou 128). L'implémentation pratique a mis en évidence le point de croisement (crossover) où Strassen commence à surpasser l'approche O(n³).",
+      downloadNotebook: "Télécharger Colab (.ipynb)"
     },
     footer: "Calculatrice technique MatrixFlow © 2024 • Propulsé par AI Studio"
   }
+};
+
+const COLAB_CODE = `!pip install matplotlib
+
+import math
+import time
+import random
+import matplotlib.pyplot as plt
+
+# ==========================================
+# Contadores Globais de Operações
+# ==========================================
+ops_mult = 0
+ops_add = 0
+
+# ==========================================
+# Funções Matemáticas Básicas
+# ==========================================
+def add_matrix(A, B):
+    global ops_add
+    n = len(A)
+    ops_add += n * n
+    return [[A[i][j] + B[i][j] for j in range(n)] for i in range(n)]
+
+def sub_matrix(A, B):
+    global ops_add
+    n = len(A)
+    ops_add += n * n
+    return [[A[i][j] - B[i][j] for j in range(n)] for i in range(n)]
+
+def split_matrix(A):
+    n = len(A)
+    mid = n // 2
+    return (
+        [[A[i][j] for j in range(mid)] for i in range(mid)],
+        [[A[i][j] for j in range(mid, n)] for i in range(mid)],
+        [[A[i][j] for j in range(mid)] for i in range(mid, n)],
+        [[A[i][j] for j in range(mid, n)] for i in range(mid, n)]
+    )
+
+def merge_matrix(C11, C12, C21, C22):
+    n = len(C11) * 2
+    mid = n // 2
+    C = [[0 for _ in range(n)] for _ in range(n)]
+    for i in range(mid):
+        for j in range(mid):
+            C[i][j] = C11[i][j]
+            C[i][j + mid] = C12[i][j]
+            C[i + mid][j] = C21[i][j]
+            C[i + mid][j + mid] = C22[i][j]
+    return C
+
+# ==========================================
+# O Caso Base α_m,0 (Multiplicação Convencional)
+# ==========================================
+def alpha_m_0_multiply(A, B):
+    global ops_mult, ops_add
+    m = len(A)
+
+    # Contagem exata ditada pela Fact 1 do artigo
+    ops_mult += (m ** 3)
+    ops_add += (m ** 2) * (m - 1)
+
+    C = [[0] * m for _ in range(m)]
+    for i in range(m):
+        for j in range(m):
+            for k in range(m):
+                C[i][j] += A[i][k] * B[k][j]
+    return C
+
+# ==========================================
+# A Recursão Híbrida α_m,k
+# ==========================================
+def strassen_hybrid_recursive(A, B, k):
+    if k == 0:
+        return alpha_m_0_multiply(A, B)
+
+    A11, A12, A21, A22 = split_matrix(A)
+    B11, B12, B21, B22 = split_matrix(B)
+
+    I = strassen_hybrid_recursive(add_matrix(A11, A22), add_matrix(B11, B22), k - 1)
+    II = strassen_hybrid_recursive(add_matrix(A21, A22), B11, k - 1)
+    III = strassen_hybrid_recursive(A11, sub_matrix(B12, B22), k - 1)
+    IV = strassen_hybrid_recursive(A22, sub_matrix(B21, B11), k - 1)
+    V = strassen_hybrid_recursive(add_matrix(A11, A12), B22, k - 1)
+    VI = strassen_hybrid_recursive(sub_matrix(A21, A11), add_matrix(B11, B12), k - 1)
+    VII = strassen_hybrid_recursive(sub_matrix(A12, A22), add_matrix(B21, B22), k - 1)
+
+    C11 = add_matrix(sub_matrix(add_matrix(I, IV), V), VII)
+    C21 = add_matrix(II, IV)
+    C12 = add_matrix(III, V)
+    C22 = add_matrix(sub_matrix(add_matrix(I, III), II), VI)
+
+    return merge_matrix(C11, C12, C21, C22)
+
+# ==========================================
+# Função Principal (Fact 2 do Artigo)
+# ==========================================
+def strassen_faithful(A, B):
+    n = len(A)
+
+    # Para matrizes menores que 16, usa o método clássico (k=0)
+    if n < 16:
+        k = 0
+        m = n
+    else:
+        # Equações de "early stopping" propostas por Strassen
+        k = math.floor(math.log2(n)) - 4
+        m = math.floor(n * (2 ** -k)) + 1
+
+    M = m * (2 ** k)
+
+    # Padding
+    A_pad = [[0] * M for _ in range(M)]
+    B_pad = [[0] * M for _ in range(M)]
+    for i in range(n):
+        for j in range(n):
+            A_pad[i][j] = A[i][j]
+            B_pad[i][j] = B[i][j]
+
+    # Executa a recursão
+    C_pad = strassen_hybrid_recursive(A_pad, B_pad, k)
+
+    # Remove padding
+    C = [[0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            C[i][j] = C_pad[i][j]
+
+    return C
+
+# ==========================================
+# Plotador do Gráfico e Benchmark
+# ==========================================
+def run_and_plot():
+    global ops_mult, ops_add
+
+    # Vamos testar de N=2 até N=200 para gerar uma curva suave
+    tamanhos = list(range(2, 201, 2))
+
+    lista_pratica = []
+    lista_teorica = []
+
+    print("Executando o algoritmo para gerar o gráfico. Aguarde...")
+
+    for n in tamanhos:
+        ops_mult = ops_add = 0
+
+        # Cria matrizes aleatórias
+        A = [[random.random() for _ in range(n)] for _ in range(n)]
+        B = [[random.random() for _ in range(n)] for _ in range(n)]
+
+        # Executa Strassen Fiel
+        strassen_faithful(A, B)
+        total_pratico = ops_mult + ops_add
+        lista_pratica.append(total_pratico)
+
+        # Calcula o Limite Teórico: 4.7 * N^(log2(7))
+        limite_teorico = 4.7 * (n ** math.log2(7))
+        lista_teorica.append(limite_teorico)
+
+    # --- Configuração do Gráfico (Matplotlib) ---
+    plt.figure(figsize=(10, 6))
+
+    # Plota as duas linhas
+    plt.plot(tamanhos, lista_pratica, label='Operações Práticas (Híbrido)', color='blue', linewidth=2)
+    plt.plot(tamanhos, lista_teorica, label='Limite Teórico (4.7 * N^2.8)', color='red', linestyle='--', linewidth=2)
+
+    # Estilização
+    plt.title('Algoritmo de Strassen: Operações Práticas vs Limite Teórico', fontsize=14)
+    plt.xlabel('Tamanho da Matriz (N)', fontsize=12)
+    plt.ylabel('Total de Operações Aritméticas', fontsize=12)
+
+    # Adiciona linha vertical para marcar o ponto de quebra (N=16)
+    plt.axvline(x=16, color='green', linestyle=':', label='Início da Recursão (N=16)')
+
+    # Usa escala logarítmica no eixo Y para visualizar a diferença com mais clareza em valores altos
+    plt.yscale('log')
+
+    plt.grid(True, which="both", ls="--", alpha=0.5)
+    plt.legend(fontsize=11)
+
+    print("Gráfico gerado! Feche a janela da imagem para encerrar o programa.")
+    plt.tight_layout()
+    plt.show()
+
+if __name__ == "__main__":
+    run_and_plot()`;
+
+const highlightPython = (code: string) => {
+  return code
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/(#.*)/g, '<span class="text-slate-500">$1</span>')
+    .replace(/\\b(def|import|from|global|for|in|return|if|else|while)\\b/g, '<span class="text-pink-400">$1</span>')
+    .replace(/\\b(math|time|random|plt\\.[a-z_]+|np\\.[a-z_]+|add_matrix|sub_matrix|split_matrix|merge_matrix|alpha_m_0_multiply|strassen_hybrid_recursive|strassen_faithful|run_and_plot|print)\\b/g, '<span class="text-blue-400">$1</span>')
+    .replace(/\\b([0-9]+\\.?[0-9]*)\\b/g, '<span class="text-purple-400">$1</span>')
+    .replace(/("[^"]*")/g, '<span class="text-emerald-400">$1</span>')
+    .replace(/('[^']*')/g, '<span class="text-emerald-400">$1</span>');
 };
 
 const MatrixGrid = ({ 
@@ -400,6 +615,48 @@ export default function App() {
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     setCopyStatus(label);
+    setTimeout(() => setCopyStatus(null), 2000);
+  };
+
+  const handleDownloadColab = () => {
+    const notebook = {
+      nbformat: 4,
+      nbformat_minor: 0,
+      metadata: {
+        colab: { name: "strassen_matrix_multiplication.ipynb" },
+        kernelspec: { name: "python3", display_name: "Python 3" }
+      },
+      cells: [
+        {
+          cell_type: "markdown",
+          metadata: {},
+          source: [
+            "# Comparação de Complexidade: Algoritmo de Strassen\n",
+            "Este notebook acompanha o relatório de pesquisa sobre produtos matriciais.\n",
+            "Implementação inicial para a Etapa 1."
+          ]
+        },
+        {
+          cell_type: "code",
+          metadata: {},
+          execution_count: null,
+          outputs: [],
+          source: COLAB_CODE.split('\n').map(line => line + '\n')
+        }
+      ]
+    };
+    
+    const blob = new Blob([JSON.stringify(notebook, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Strassen_Algorithm.ipynb';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    setCopyStatus('Notebook');
     setTimeout(() => setCopyStatus(null), 2000);
   };
 
@@ -696,66 +953,6 @@ export default function App() {
 
           {/* Sidebar Tools & Conversions */}
           <aside className="lg:col-span-4 space-y-8">
-            {/* Export Cards */}
-            <div className="bg-surface-dark border border-border-dark rounded-3xl p-6 space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">{t.export.title}</h3>
-              
-              <button 
-                onClick={() => handleCopy(JSON.stringify({ A: matrixA.slice(0, rowsA).map(r => r.slice(0, colsA)), B: matrixB.slice(0, rowsB).map(r => r.slice(0, colsB)), C: resultMatrix }, null, 2), 'JSON')}
-                className="w-full flex items-center justify-between p-4 bg-bg-dark/50 border border-border-dark rounded-2xl hover:bg-accent/5 hover:border-accent/40 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <FileJson className="w-5 h-5 text-slate-400 group-hover:text-accent" />
-                  <div className="text-left">
-                    <p className="text-sm font-semibold">{t.export.json}</p>
-                    <p className="text-[10px] text-slate-500">{t.export.jsonDesc}</p>
-                  </div>
-                </div>
-                {copyStatus === 'JSON' ? <Check className="w-4 h-4 text-accent" /> : <ChevronRight className="w-4 h-4 text-slate-700" />}
-              </button>
-
-              <button 
-                onClick={() => {
-                  if (!resultMatrix) return;
-                  const latex = `\\begin{pmatrix}\n${resultMatrix.map(row => row.join(' & ')).join(' \\\\ \n')}\n\\end{pmatrix}`;
-                  handleCopy(latex, 'LaTeX');
-                }}
-                className="w-full flex items-center justify-between p-4 bg-bg-dark/50 border border-border-dark rounded-2xl hover:bg-accent/5 hover:border-accent/40 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <FileCode className="w-5 h-5 text-slate-400 group-hover:text-accent" />
-                  <div className="text-left">
-                    <p className="text-sm font-semibold">{t.export.latex}</p>
-                    <p className="text-[10px] text-slate-500">{t.export.latexDesc}</p>
-                  </div>
-                </div>
-                {copyStatus === 'LaTeX' ? <Check className="w-4 h-4 text-accent" /> : <ChevronRight className="w-4 h-4 text-slate-700" />}
-              </button>
-            </div>
-
-            {/* Lead Capture Widget */}
-            <div className="bg-accent/5 border border-accent/20 rounded-3xl p-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-accent/10 blur-3xl rounded-full translate-x-12 -translate-y-12"></div>
-              <h3 className="text-sm font-bold text-slate-200 mb-2 flex items-center gap-2">
-                <Download className="w-4 h-4 text-accent" />
-                {t.guide.title}
-              </h3>
-              <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-                {t.guide.desc}
-              </p>
-              <div className="space-y-3">
-                <input 
-                  type="email" 
-                  placeholder={t.guide.placeholder}
-                  className="w-full bg-bg-dark border border-border-dark rounded-xl p-3 text-xs focus:border-accent focus:ring-1 focus:ring-accent outline-none"
-                />
-                <button className="w-full bg-accent hover:bg-accent/90 text-bg-dark font-bold py-3 rounded-xl text-xs transition-transform active:scale-95 flex items-center justify-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  {t.guide.cta}
-                </button>
-              </div>
-            </div>
-
             {/* Educational Tooltip */}
             <div className="bg-surface-dark border border-border-dark rounded-3xl p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -792,36 +989,22 @@ export default function App() {
 
               <div className="space-y-6">
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileCode className="w-4 h-4 text-slate-500" />
-                    <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold">{t.report.codeTitle}</h4>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <FileCode className="w-4 h-4 text-slate-500" />
+                      <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold">{t.report.codeTitle}</h4>
+                    </div>
+                    <button 
+                      onClick={handleDownloadColab}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 hover:bg-accent/20 text-accent font-semibold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
+                    >
+                      <Download className="w-3 h-3" />
+                      {t.report.downloadNotebook}
+                    </button>
                   </div>
-                  <div className="bg-bg-dark border border-border-dark rounded-xl p-4 overflow-x-auto">
-                    <pre className="text-[12px] font-mono leading-relaxed text-slate-300">
-                      <code dangerouslySetInnerHTML={{__html: `<span class="text-pink-400">import</span> numpy <span class="text-pink-400">as</span> np
-<span class="text-pink-400">import</span> time
-
-<span class="text-pink-400">def</span> <span class="text-blue-400">strassen_multiply</span>(A, B):
-    n = <span class="text-blue-400">len</span>(A)
-    <span class="text-pink-400">if</span> n &lt;= <span class="text-emerald-400">32</span>:
-        <span class="text-purple-400">return</span> np.<span class="text-blue-400">dot</span>(A, B) <span class="text-slate-500"># Fallback standard</span>
-    
-    mid = n <span class="text-pink-400">//</span> <span class="text-emerald-400">2</span>
-    A11, A12 = A[:mid, :mid], A[:mid, mid:]
-    A21, A22 = A[mid:, :mid], A[mid:, mid:]
-    B11, B12 = B[:mid, :mid], B[:mid, mid:]
-    B21, B22 = B[mid:, :mid], B[mid:, mid:]
-    
-    <span class="text-slate-500"># 7 Multiplicações Recursivas</span>
-    P1 = strassen_multiply(A11 + A22, B11 + B22)
-    P2 = strassen_multiply(A21 + A22, B11)
-    P3 = strassen_multiply(A11, B12 - B22)
-    P4 = strassen_multiply(A22, B21 - B11)
-    P5 = strassen_multiply(A11 + A12, B22)
-    P6 = strassen_multiply(A21 - A11, B11 + B12)
-    P7 = strassen_multiply(A12 - A22, B21 + B22)
-    
-    <span class="text-slate-500"># Matriz C resultante...</span>`}} />
+                  <div className="bg-bg-dark border border-border-dark rounded-xl p-4 overflow-x-auto max-h-[500px] overflow-y-auto">
+                    <pre className="text-[12px] font-mono leading-relaxed text-slate-300 whitespace-pre-wrap">
+                      <code dangerouslySetInnerHTML={{__html: highlightPython(COLAB_CODE)}} />
                     </pre>
                   </div>
                 </div>
@@ -832,9 +1015,28 @@ export default function App() {
                     <BarChart className="w-4 h-4" />
                     {t.report.comparisonTitle}
                   </h4>
-                  <p className="text-slate-400 text-sm leading-relaxed">
+                  <p className="text-slate-400 text-sm leading-relaxed mb-6">
                     {t.report.comparisonDesc}
                   </p>
+
+                  <div className="w-full h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                        <XAxis dataKey="n" stroke="#94a3b8" fontSize={12} tickMargin={10} />
+                        <YAxis stroke="#94a3b8" fontSize={12} tickFormatter={(val) => val > 1000 ? (val/1000).toFixed(1) + 'k' : val} />
+                        <RechartsTooltip 
+                          contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                          itemStyle={{ color: '#e2e8f0' }}
+                          formatter={(value, name) => [Math.floor(Number(value) || 0).toLocaleString(), name]}
+                          labelFormatter={(label) => `N = ${label}`}
+                        />
+                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                        <Line type="monotone" dataKey="practical" name={lang === 'pt-BR' ? "Operações Práticas" : "Practical Ops"} stroke="#3b82f6" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="theoretical" name={lang === 'pt-BR' ? "Limite Teórico" : "Theoretical Limit"} stroke="#ef4444" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
             </div>
@@ -874,16 +1076,6 @@ export default function App() {
                 <div className="p-4 bg-bg-dark border border-border-dark rounded-xl overflow-x-auto">
                   <InlineMath math="c_{ij} = a_{i1}b_{1j} + a_{i2}b_{2j} + \dots + a_{in}b_{nj}" />
                 </div>
-              </div>
-            </div>
-
-            <div className="bg-surface-dark border border-border-dark p-8 rounded-3xl text-center space-y-4">
-              <h3 className="text-xl font-bold">{t.educational.orderTitle}</h3>
-              <p className="text-slate-400 text-sm max-w-2xl mx-auto">
-                {t.educational.orderDesc}
-              </p>
-              <div className="text-accent font-bold text-lg italic mt-4">
-                $AB \neq BA$
               </div>
             </div>
           </div>
