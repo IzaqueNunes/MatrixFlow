@@ -77,6 +77,14 @@ const translations: Record<Language, any> = {
         orderTitle: "Why Order Matters",
         orderDesc: "Unlike scalar multiplication, matrix multiplication is not commutative. This means that AB ≠ BA in most cases. Swapping the order can lead to entirely different results, or even make the operation undefined if dimensions no longer match."
     },
+    report: {
+      title: "Project Roadmap & Research Report",
+      step1: "Phase 1: Classic Strassen Algorithm",
+      step1Desc: "The first step of our research involved implementing the classic Strassen algorithm in Python (via Google Colab) to compare the theoretical complexity O(n^2.807) with the practical execution time across various matrix sizes.",
+      codeTitle: "Google Colab Implementation (Python)",
+      comparisonTitle: "Theoretical vs. Practical Complexity",
+      comparisonDesc: "While the theoretical complexity of Strassen is O(n^2.807), in practice, the overhead of recursive calls, memory allocation, and hardware-level optimizations (like cache locality) often make standard algorithms faster for smaller matrices (n < 64 or 128). The practical implementation highlighted the crossover point where Strassen begins to outperform the O(n³) approach."
+    },
     footer: "MatrixFlow Technical Calculator © 2024 • Powered by AI Studio"
   },
   'pt-BR': {
@@ -138,6 +146,14 @@ const translations: Record<Language, any> = {
         orderTitle: "Por que a Ordem Importa",
         orderDesc: "Ao contrário da multiplicação escalar, a multiplicação de matrizes não é comutativa. Isso significa que AB ≠ BA na maioria dos casos. Trocar a ordem pode levar a resultados totalmente diferentes, ou até tornar a operação indefinida se as dimensões não coincidirem mais."
     },
+    report: {
+      title: "Relatório de Pesquisa & Roadmap",
+      step1: "Etapa 1: Algoritmo de Strassen Clássico",
+      step1Desc: "A primeira etapa do nosso trabalho envolveu a implementação do algoritmo clássico de Strassen em Python (via Google Colab) para comparar a complexidade teórica O(n^2.807) com o tempo de execução prático em vários tamanhos de matrizes.",
+      codeTitle: "Implementação no Google Colab (Python)",
+      comparisonTitle: "Complexidade Teórica vs. Prática",
+      comparisonDesc: "Enquanto a complexidade teórica do Strassen é O(n^2.807), na prática, o custo das chamadas recursivas, alocação de memória e otimizações de hardware (como localidade de cache) frequentemente tornam algoritmos padrão mais rápidos para matrizes menores (n < 64 ou 128). A implementação prática evidenciou o ponto de cruzamento (crossover) onde o Strassen começa a superar a abordagem O(n³)."
+    },
     footer: "MatrixFlow Calculadora Técnica © 2024 • Powered by AI Studio"
   },
   'fr': {
@@ -198,6 +214,14 @@ const translations: Record<Language, any> = {
         dotDesc: "Chaque élément c_{ij} do produit matriciel est calculé en effectuant le produit scalaire de la i-ème ligne de A et de la j-ème colonne de B.",
         orderTitle: "Pourquoi l'ordre compte",
         orderDesc: "Contrairement à la multiplication scalaire, la multiplication de matrices n'est pas commutative. Cela signifie que AB ≠ BA dans la plupart des cas. Changer l'ordre peut conduire à des résultats totalement différents, ou même rendre l'opération indéfinie si les dimensions ne correspondent plus."
+    },
+    report: {
+      title: "Rapport de recherche et feuille de route",
+      step1: "Étape 1: Algorithme de Strassen classique",
+      step1Desc: "La première étape de notre recherche a consisté à implémenter l'algorithme de Strassen classique en Python (via Google Colab) pour comparer la complexité théorique O(n^2.807) au temps d'exécution pratique sur différentes tailles de matrices.",
+      codeTitle: "Implémentation Google Colab (Python)",
+      comparisonTitle: "Complexité théorique vs pratique",
+      comparisonDesc: "Bien que la complexité théorique de Strassen soit O(n^2.807), en pratique, le coût des appels récursifs, de l'allocation mémoire et des optimisations matérielles (comme la localité du cache) rendent souvent les algorithmes standards plus rapides pour les petites matrices (n < 64 ou 128). L'implémentation pratique a mis en évidence le point de croisement (crossover) où Strassen commence à surpasser l'approche O(n³)."
     },
     footer: "Calculatrice technique MatrixFlow © 2024 • Propulsé par AI Studio"
   }
@@ -745,6 +769,77 @@ export default function App() {
             </div>
           </aside>
         </div>
+
+        {/* Project Roadmap / Research Report */}
+        <section className="mt-24 border-t border-border-dark pt-16">
+          <div className="max-w-4xl mx-auto space-y-12">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-white mb-4">{t.report.title}</h2>
+              <div className="h-1 w-12 bg-accent mx-auto rounded-full"></div>
+            </div>
+
+            <div className="bg-surface-dark border border-border-dark rounded-3xl p-8 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 blur-3xl rounded-full translate-x-16 -translate-y-16"></div>
+              
+              <h3 className="text-xl font-bold text-slate-100 flex items-center gap-3 mb-4">
+                <span className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent text-sm">1</span>
+                {t.report.step1}
+              </h3>
+              
+              <p className="text-slate-400 text-sm leading-relaxed mb-8">
+                {t.report.step1Desc}
+              </p>
+
+              <div className="space-y-6">
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileCode className="w-4 h-4 text-slate-500" />
+                    <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold">{t.report.codeTitle}</h4>
+                  </div>
+                  <div className="bg-bg-dark border border-border-dark rounded-xl p-4 overflow-x-auto">
+                    <pre className="text-[12px] font-mono leading-relaxed text-slate-300">
+                      <code dangerouslySetInnerHTML={{__html: `<span class="text-pink-400">import</span> numpy <span class="text-pink-400">as</span> np
+<span class="text-pink-400">import</span> time
+
+<span class="text-pink-400">def</span> <span class="text-blue-400">strassen_multiply</span>(A, B):
+    n = <span class="text-blue-400">len</span>(A)
+    <span class="text-pink-400">if</span> n &lt;= <span class="text-emerald-400">32</span>:
+        <span class="text-purple-400">return</span> np.<span class="text-blue-400">dot</span>(A, B) <span class="text-slate-500"># Fallback standard</span>
+    
+    mid = n <span class="text-pink-400">//</span> <span class="text-emerald-400">2</span>
+    A11, A12 = A[:mid, :mid], A[:mid, mid:]
+    A21, A22 = A[mid:, :mid], A[mid:, mid:]
+    B11, B12 = B[:mid, :mid], B[:mid, mid:]
+    B21, B22 = B[mid:, :mid], B[mid:, mid:]
+    
+    <span class="text-slate-500"># 7 Multiplicações Recursivas</span>
+    P1 = strassen_multiply(A11 + A22, B11 + B22)
+    P2 = strassen_multiply(A21 + A22, B11)
+    P3 = strassen_multiply(A11, B12 - B22)
+    P4 = strassen_multiply(A22, B21 - B11)
+    P5 = strassen_multiply(A11 + A12, B22)
+    P6 = strassen_multiply(A21 - A11, B11 + B12)
+    P7 = strassen_multiply(A12 - A22, B21 + B22)
+    
+    <span class="text-slate-500"># Matriz C resultante...</span>`}} />
+                    </pre>
+                  </div>
+                </div>
+
+                <div className="bg-bg-dark border border-border-dark p-6 rounded-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 blur-2xl rounded-full translate-x-12 -translate-y-12"></div>
+                  <h4 className="text-sm font-bold text-accent mb-3 flex items-center gap-2">
+                    <BarChart className="w-4 h-4" />
+                    {t.report.comparisonTitle}
+                  </h4>
+                  <p className="text-slate-400 text-sm leading-relaxed">
+                    {t.report.comparisonDesc}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* SEO / Educational Footer Content */}
         <section className="mt-24 border-t border-border-dark pt-16">
